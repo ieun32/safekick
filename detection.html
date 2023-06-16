@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="output.css" rel="stylesheet">
+  <title>safekick</title>
+    <style>
+        /* canvas {
+            position: absolute;
+            left: 30%;
+            right: 30%;
+        }
+
+        video {
+            position: absolute;
+            left: 30%;
+            right: 30%;
+        } */
+    </style>
+</head>
+<body>
+    <iframe class="w-full" src="./header.html"></iframe>
+    <div className="container" class="flex flex-col items-center justify-center align-middle">
+        <video class="absolute w-4/6 lg:w-3/6 top-28" id="video" width="640" height="480" autoplay muted playsinline></video>
+        <canvas class='absolute w-4/6 lg:w-3/6 top-28' id="canvas"></canvas>
+        <div class="flex justify-center">
+        <button class="text-lg font-bold absolute bg-white rounded p-2 shadow-lg" id="btn"></button>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.11.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
+
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById("canvas");
+        const context = canvas.getContext("2d");
+        const button = document.getElementById("btn");
+
+        var constraints = { audio: false, video: { width: 640, height: 480 } };
+
+        navigator.mediaDevices.getUserMedia(constraints)
+            .then(function (mediaStream) {
+                video.srcObject = mediaStream;
+                video.onloadedmetadata = function (e) {
+                    video.play();
+                };
+            })
+            .catch(function (err) { console.log(err.name + ": " + err.message); });
+
+
+        cocoSsd.load().then(model => {
+            predict();
+            function predict() {
+                context.drawImage(video, 0, 0);
+                model.detect(canvas).then(predictions => {
+                    // console.log('Predictions: ', predictions);
+                    // console.log(video.width, video.height);
+                    canvas.width = video.width;
+                    canvas.height = video.height;
+
+
+                    for (let i = 0; i < predictions.length; i++) {
+                        context.beginPath(); //빈경로 새롭게 시작
+                        context.fillStyle = "rgba(95, 208, 104, 0.5)";
+                        context.moveTo(220, 240);
+                        context.lineTo(420, 240);
+                        context.lineTo(510, 480);
+                        context.lineTo(110, 480);
+                        context.closePath(); //경로를 닫아줌
+                        context.fill();
+
+                        context.beginPath();
+                        context.lineWidth = 1;
+                        //party mode
+                        const color = Math.floor(Math.random() * 16777215).toString(16);
+                        context.strokeStyle = '#' + color
+                        //            context.strokeStyle = "#2fff00"
+                        context.rect(...predictions[i].bbox);
+
+
+                        context.stroke();
+                        context.font = '24px Arial';
+                        context.fillStyle = '#' + color;
+                        context.fillText(predictions[i].class + ' ' + parseInt(predictions[i].score * 100) + '%', predictions[i].bbox[0], predictions[i].bbox[1]);
+
+                        console.log(predictions[i].class)
+                    }
+
+                    for (let i = 0; i < predictions.length; i++) {
+                        console.log(predictions[i].class)
+                        console.log(predictions[i].bbox[0], predictions[i].bbox[1], predictions[i].bbox[2], predictions[i].bbox[3])
+                        console.log(predictions[i].score)
+                        if ( predictions[i].bbox[0] >= 110 && predictions[i].bbox[0] <= 510 &&  predictions[i].bbox[1]+predictions[i].bbox[3] >= 240 && predictions[i].class === "car") {
+                            console.log("차량이 감지되었습니다.")
+                            button.innerHTML = "차량이 감지되었습니다."
+                        }
+                        else if ( predictions[i].bbox[0] >= 110 && predictions[i].bbox[0] <= 510 &&  predictions[i].bbox[1]+predictions[i].bbox[3] >= 240 && predictions[i].class === "person") {
+                            console.log("보행자가 감지되었습니다.")
+                            button.innerHTML = "보행자가 감지되었습니다."
+
+                        } else if ( predictions[i].bbox[0] >= 110 && predictions[i].bbox[0] <= 510 &&  predictions[i].bbox[1]+predictions[i].bbox[3] >= 240 && predictions[i].class === "motorcycle") {
+                            console.log("오토바이가 감지되었습니다.")
+                            button.innerHTML = "오토바이가 감지되었습니다."
+
+                        } else if ( predictions[i].bbox[0] >= 110 && predictions[i].bbox[0] <= 510 &&  predictions[i].bbox[1]+predictions[i].bbox[3] >= 240 && predictions[i].class === "truck") {
+                            console.log("트럭이 감지되었습니다.")
+                            button.innerHTML = "트럭이 감지되었습니다."
+
+                        } else if ( predictions[i].bbox[0] >= 110 && predictions[i].bbox[0] <= 510 &&  predictions[i].bbox[1]+predictions[i].bbox[3] >= 240 && predictions[i].class === "bus") {
+                            console.log("버스가 감지되었습니다.")
+                            button.innerHTML = "버스가 감지되었습니다."
+
+                        } else if ( predictions[i].bbox[0] >= 110 && predictions[i].bbox[0] <= 510 &&  predictions[i].bbox[1]+predictions[i].bbox[3] >= 240 && predictions[i].class === "bicycle") {
+                            console.log("자전거가 감지되었습니다.")
+                            button.innerHTML = "자전거가 감지되었습니다."
+
+                        } else {
+                            console.log("감지되지 않았습니다.")
+                            button.innerHTML = "감지되지 않았습니다."
+                        }
+                    }
+                });
+                requestAnimationFrame(predict);
+
+            }
+        });
+
+        setInterval(() => {
+            switch (button.innerHTML) {
+                case "차량이 감지되었습니다.":
+                    const car_audio = new Audio('./audio/alert_car.wav');
+                    car_audio.play();
+                    break;
+                case "보행자가 감지되었습니다.":
+                    const person_audio = new Audio('./audio/alert_person.wav');
+                    person_audio.play();
+                    break;
+                case "오토바이가 감지되었습니다.":
+                    const moto_audio = new Audio('./audio/alert_motocycle.wav');
+                    moto_audio.play();
+                    break;
+                case "트럭이 감지되었습니다.":
+                    const truck_audio = new Audio('./audio/alert_truck.wav');
+                    truck_audio.play();
+                    break;
+                case "버스가 감지되었습니다.":
+                    const bus_audio = new Audio('./audio/alert_bus.wav');
+                    bus_audio.play();
+                    break;
+                case "자전거가 감지되었습니다.":
+                    const bicycle_audio = new Audio('./audio/alert_bicycle.wav');
+                    bicycle_audio.play();
+                    break;
+
+                default:
+                    break;
+            }
+        }, 3000)
+    </script>
+</body>
+</html>
